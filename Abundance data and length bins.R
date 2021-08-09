@@ -44,7 +44,7 @@ data<-read.csv("fish length.csv")
 
 
 # Parse out metadata ---
-metadata<-subset(data, select = c(1:15))%>%
+metadata<-subset(data, select = c(1:18))%>%
   distinct(Opcode, .keep_all = TRUE)%>%
   group_by(Opcode) %>% 
   filter(row_number() == 1)%>%
@@ -52,9 +52,12 @@ metadata<-subset(data, select = c(1:15))%>%
 metadata
 
 # Parse out Length and Species data ---
-Lengthdf <-subset(data, select = c(15,16,17,6,4,7,10))
+Lengthdf <-subset(data, select = c(15,16,17,18,6,4,7,10))
 as.data.frame(Lengthdf)
 
+Opcodelist<-unique(Lengthdf$Opcode)
+Opcodelist<- as.data.frame(Opcodelist)
+head(Opcodelist)
 
 
 ##SMALL CLASS##
@@ -68,37 +71,24 @@ Small <-subset(Lengthdf, Length>=34 & Length<=67)%>%
   dplyr::group_by(Opcode, Genus.Species, Status, Location, Site, Year)%>%
  tally()
 
-## Assuming all are currently represented somewhere in data set,
-(SmallStatus <- unique(Small$Status[!is.na(Small$Status)]))
-(SmallOpcode<- unique(Small$Opcode[!is.na(Small$Opcode)]))
-(SmallGenus.Species <- unique(Small$Genus.Species[!is.na(Small$Genus.Species)]))
-(SmallYear<- unique(Small$Year[!is.na(Small$Year)]))
-(SmallLocation <- unique(Small$Location[!is.na(Small$Location)]))
-(SmallSite <- unique(Small$Site[!is.na(Small$Site)]))
 
-## The complete data with all species, for all locations, for all
-## Status, present is
-Small.complete <- expand.grid(SmallSt = SmallStatus, SmallOp = SmallOpcode,
-                             Smallsp = SmallGenus.Species, Smallyr=SmallYear, 
-                             SmallLoc=SmallLocation, SmallSite=SmallSite)
+Small.complete.data<-Small %>% 
+  ungroup() %>%
+  complete(Genus.Species, nesting (Status,Site, Location, Year,Opcode),  fill = list(n = 0))#gives a complete list of species with zeros for absences
+  
 
-## Put the two together, with NA for unrecorded abundance
-Small.complete.data <- merge(Small.complete, Small,
-                            by.x = c("SmallSt", "SmallOp", "Smallsp","Smallyr", "SmallLoc", "SmallSite"),
-                            by.y = c("Status", "Opcode", "Genus.Species", "Year", "Location", "Site"),
-                            all.x = TRUE)
-
-## Fill in the NAs
-Small.complete.data$n[is.na(Small.complete.data$n)] <- 0
+#check all opcodes are present in data
+SmallOpcodelist<-unique(Small.complete.data$Opcode)
+SmallOpcodelist<- as.data.frame(Opcodelist)
+head(Opcodelist)
 
 
 
 ##convert to Wide Format
-Small.data_wide <- spread(Small.complete.data, Smallsp, n)
-
+Small.data_wide <- spread(Small.complete.data, Genus.Species, n, fill =list(n = 0))
 
 #reorder columns
-  Small.data_wide <- Small.data_wide[, c(6:26, 1,2,3,4,5)] #adjust to suit number of columns and factors in data
+Small.data_wide <- Small.data_wide[, c(6:154, 1,2,3,4,5)] #adjust to suit number of columns and factors in data
 
 
 # Make the blank Column----
@@ -109,13 +99,16 @@ blank.column<-data.frame(temp.column)
 Small.data_wide[]<-lapply(Small.data_wide,as.character) #have to make whole data.frame as.character
 Small.primer<-Small.data_wide%>%
   bind_rows(blank.column)
-Small.primer<- Small.primer[, c(1:21, 27,22,23,24,25,26)]#adjust to suit number of columns in data
+Small.primer<- Small.primer[, c(1:149, 155,150,151,152,153,154)]#adjust to suit number of columns in data
 Small.primer <- plyr::rename(Small.primer, replace =c("temp.column"="") )
 Small.primer[is.na(Small.primer)] <- ""
+Small.primer$Code <- 1:nrow(df) 
+Small.primer<- Small.primer[, c(156, 1:155)]#
+
 
 # Write PRIMER data----
 head(Small.primer)
-write.csv(Small.primer,file=paste(study,"Small.PRIMER.redone.csv",sep = "_"), row.names=FALSE)
+write.csv(Small.primer,file=paste(study,"Small.PRIMER.Fixed.csv",sep = "_"), row.names=FALSE)
 
 
 
@@ -128,37 +121,22 @@ Med <-subset(Lengthdf, Length>=105 & Length<=299)%>%
   dplyr::group_by(Opcode, Genus.Species, Status, Location, Site, Year)%>%
   tally()
 
-## Assuming all are currently represented somewhere in data set,
-(MedStatus <- unique(Med$Status[!is.na(Med$Status)]))
-(MedOpcode<- unique(Med$Opcode[!is.na(Med$Opcode)]))
-(MedGenus.Species <- unique(Med$Genus.Species[!is.na(Med$Genus.Species)]))
-(MedYear<- unique(Med$Year[!is.na(Med$Year)]))
-(MedLocation <- unique(Med$Location[!is.na(Med$Location)]))
-(MedSite <- unique(Med$Site[!is.na(Med$Site)]))
+Med.complete.data<-Med %>% 
+  ungroup() %>%
+  complete(Site,  fill = list(n = 0)) %>%
+  complete(Genus.Species, nesting (Opcode,Status, Site, Location, Year), fill = list(n = 0))
 
-## The complete data with all species, for all locations, for all
-## Status, present is
-Med.complete <- expand.grid(MedSt = MedStatus, MedOp = MedOpcode,
-                              Medsp = MedGenus.Species, Medyr=MedYear, 
-                              MedLoc=MedLocation, MedSite=MedSite)
-
-## Put the two together, with NA for unrecorded abundance
-Med.complete.data <- merge(Med.complete, Med,
-                             by.x = c("MedSt", "MedOp", "Medsp","Medyr", "MedLoc", "MedSite"),
-                             by.y = c("Status", "Opcode", "Genus.Species", "Year", "Location", "Site"),
-                             all.x = TRUE)
-
-## Fill in the NAs
-Med.complete.data$n[is.na(Med.complete.data$n)] <- 0
-
-
+#check all sites are present in data
+MedSite<-unique(Med.complete.data$Site)
+MedSiteList<- as.data.frame(MedSite)
+head(MedSiteList)
 
 ##convert to Wide Format
-Med.data_wide <- spread(Med.complete.data, Medsp, n)
+Med.data_wide <- spread(Med.complete.data, Genus.Species, n)
 
 
 #reorder columns
-Med.data_wide <- Med.data_wide[, c(6:94, 1,2,3,4,5)]#change this to suit the number of columns and factors
+Med.data_wide <- Med.data_wide[, c(6:154, 1,2,3,4,5)]#change this to suit the number of columns and factors
 
 
 # Make the blank Column----
@@ -169,13 +147,13 @@ blank.column<-data.frame(temp.column)
 Med.data_wide[]<-lapply(Med.data_wide,as.character) #have to make whole data.frame as.character
 Med.primer<-Med.data_wide%>%
   bind_rows(blank.column)
-Med.primer<- Med.primer[, c(1:89, 95,90,91,92,93,94)]#change this to suit the number of columns
+Med.primer<- Med.primer[, c(1:149, 155,150,151,152,153,154)]#change this to suit the number of columns
 Med.primer <- plyr::rename(Med.primer, replace =c("temp.column"="") )
 Med.primer[is.na(Med.primer)] <- ""
 
 # Write PRIMER data----
 head(Med.primer)
-write.csv(Med.primer,file=paste(study,"Med.PRIMER.Redone.csv",sep = "_"), row.names=FALSE)
+write.csv(Med.primer,file=paste(study,"Med.PRIMER.fixed.csv",sep = "_"), row.names=FALSE)
 
 
 
@@ -189,38 +167,25 @@ Large <-subset(Lengthdf, Length>=360 & Length<=1000)%>%
   ### Use this bit if you want abundance
   dplyr::group_by(Opcode, Genus.Species, Status, Location, Site, Year)%>%
   tally()
+Large.complete.data<-Large %>% 
+  ungroup() %>%
+  complete(Site,  fill = list(n = 0)) %>%
+  complete(Genus.Species, nesting (Opcode,Status, Site, Location, Year), fill = list(n = 0))
 
-## Assuming all are currently represented somewhere in data set,
-(LargeStatus <- unique(Large$Status[!is.na(Large$Status)]))
-(LargeOpcode<- unique(Large$Opcode[!is.na(Large$Opcode)]))
-(LargeGenus.Species <- unique(Large$Genus.Species[!is.na(Large$Genus.Species)]))
-(LargeYear<- unique(Large$Year[!is.na(Large$Year)]))
-(LargeLocation <- unique(Large$Location[!is.na(Large$Location)]))
-(LargeSite <- unique(Large$Site[!is.na(Large$Site)]))
-
-## The complete data with all species, for all locations, for all
-## Status, present is
-Large.complete <- expand.grid(LargeSt = LargeStatus, LargeOp = LargeOpcode,
-                            Largesp = LargeGenus.Species, Largeyr=LargeYear, 
-                            LargeLoc=LargeLocation, LargeSite=LargeSite)
-
-## Put the two together, with NA for unrecorded abundance
-Large.complete.data <- merge(Large.complete, Large,
-                           by.x = c("LargeSt", "LargeOp", "Largesp","Largeyr", "LargeLoc", "LargeSite"),
-                           by.y = c("Status", "Opcode", "Genus.Species", "Year", "Location", "Site"),
-                           all.x = TRUE)
-
-## Fill in the NAs
-Large.complete.data$n[is.na(Large.complete.data$n)] <- 0
-
-
+#check all sites are present in data
+LargeSite<-unique(Large.complete.data$Site)
+LargeSiteList<- as.data.frame(LargeSite)
+head(LargeSiteList)
 
 ##convert to Wide Format
-Large.data_wide <- spread(Large.complete.data, Largesp, n)
+Large.data_wide <- spread(Large.complete.data, Genus.Species, n)
+
+##convert to Wide Format
+Large.data_wide <- spread(Large.complete.data, Genus.Species, n)
 
 
 #reorder columns
-Large.data_wide <- Large.data_wide[, c(6:81, 1,2,3,4,5)]#change this to suit the number of columns
+Large.data_wide <- Large.data_wide[, c(6:154, 1,2,3,4,5)]#change this to suit the number of columns
 
 
 # Make the blank Column----
@@ -231,13 +196,13 @@ blank.column<-data.frame(temp.column)
 Large.data_wide[]<-lapply(Large.data_wide,as.character) #have to make whole data.frame as.character
 Large.primer<-Large.data_wide%>%
   bind_rows(blank.column)
-Large.primer<- Large.primer[, c(1:76, 82,77,78,79,80,81)]#change this to suit the number of columns
+Large.primer<- Large.primer[, c(1:149, 155,150,151,152,153,154)]#change this to suit the number of columns
 Large.primer <- plyr::rename(Large.primer, replace =c("temp.column"="") )
 Large.primer[is.na(Large.primer)] <- ""
 
 # Write PRIMER data----
 head(Large.primer)
-write.csv(Large.primer,file=paste(study,"Large.PRIMER.redone.csv",sep = "_"), row.names=FALSE)
+write.csv(Large.primer,file=paste(study,"Large.PRIMER.fixed.csv",sep = "_"), row.names=FALSE)
 
 
 
