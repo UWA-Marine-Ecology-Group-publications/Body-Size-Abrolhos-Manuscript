@@ -30,7 +30,7 @@ study<-"bodysize"
 
 ## Set your working directory ----
 working.dir<-dirname(rstudioapi::getActiveDocumentContext()$path) # sets working directory to that of this script - or type your own
-working.dir<-setwd("C:/Users/00104541/OneDrive - University of Wollongong/Tim Body Length")
+##working.dir<-setwd("C:/Users/00104541/OneDrive - University of Wollongong/Tim Body Length")
 ## Save these directory names to use later----
 raw.dir<-paste(working.dir,"Raw data",sep="/")
 tidy.dir<-paste(working.dir,"Tidy data",sep="/")
@@ -72,23 +72,36 @@ Small <-subset(Lengthdf, Length>=34 & Length<=67)%>%
  tally()
 
 
+#check how many species in data
+Small.Species <- unique(Small$Genus.Species[!is.na(Small$Genus.Species)])
+SmallSpecies<- as.data.frame(Small.Species)
+head(SmallSpeciesList)
+
+factors<- metadata%>% select(Opcode, Status, Location, Site, Year)
+
 Small.complete.data<-Small %>% 
   ungroup() %>%
-  complete(Genus.Species, nesting (Status,Site, Location, Year,Opcode),  fill = list(n = 0))#gives a complete list of species with zeros for absences
+  dplyr::select(Opcode, Genus.Species,n)%>%
+  complete(Opcode)%>%
+  complete(Genus.Species, nesting(Opcode), fill = list(n = 0))%>% #gives a complete list of species with zeros for absences
+  left_join(.,factors)
   
 
 #check all opcodes are present in data
 SmallOpcodelist<-unique(Small.complete.data$Opcode)
-SmallOpcodelist<- as.data.frame(Opcodelist)
+SmallOpcodelist<- as.data.frame(SmallOpcodelist)
 head(Opcodelist)
 
-
-
 ##convert to Wide Format
-Small.data_wide <- spread(Small.complete.data, Genus.Species, n, fill =list(n = 0))
+Small.data_wide <- spread(Small.complete.data, Genus.Species, n)
+
+##Remove all species with all zero columns
+sm.test<-Small.data_wide[, c(6:155)]
+sm.df<-sm.test[, colSums(sm.test,na.rm = TRUE) != 0]
+sm.fact<-Small.data_wide[, c(1:5)]
 
 #reorder columns
-Small.data_wide <- Small.data_wide[, c(6:154, 1,2,3,4,5)] #adjust to suit number of columns and factors in data
+Small.data_wide<-cbind(sm.df,sm.fact)
 
 
 # Make the blank Column----
@@ -99,16 +112,16 @@ blank.column<-data.frame(temp.column)
 Small.data_wide[]<-lapply(Small.data_wide,as.character) #have to make whole data.frame as.character
 Small.primer<-Small.data_wide%>%
   bind_rows(blank.column)
-Small.primer<- Small.primer[, c(1:149, 155,150,151,152,153,154)]#adjust to suit number of columns in data
+Small.primer<- Small.primer[, c(1:21, 27,22,23,24,25,26)]#adjust to suit number of columns in data
 Small.primer <- plyr::rename(Small.primer, replace =c("temp.column"="") )
 Small.primer[is.na(Small.primer)] <- ""
-Small.primer$Code <- 1:nrow(df) 
-Small.primer<- Small.primer[, c(156, 1:155)]#
+Small.primer$Code <- 1:nrow(Small.primer) 
+Small.primer<- Small.primer[, c(28, 1:27)]#
 
 
 # Write PRIMER data----
 head(Small.primer)
-write.csv(Small.primer,file=paste(study,"Small.PRIMER.Fixed.csv",sep = "_"), row.names=FALSE)
+write.csv(Small.primer,file=paste(study,"Small.PRIMER.fixed.csv",sep = "_"), row.names=FALSE)
 
 
 
@@ -121,10 +134,19 @@ Med <-subset(Lengthdf, Length>=105 & Length<=299)%>%
   dplyr::group_by(Opcode, Genus.Species, Status, Location, Site, Year)%>%
   tally()
 
+#check how many species in data
+MedSpecies<-unique(Med$Genus.Species)
+MedSiteSpecies<- as.data.frame(MedSpecies)
+head(MedSpeciesList)
+
+factors<- metadata%>% select(Opcode, Status, Location, Site, Year)
+
 Med.complete.data<-Med %>% 
   ungroup() %>%
-  complete(Site,  fill = list(n = 0)) %>%
-  complete(Genus.Species, nesting (Opcode,Status, Site, Location, Year), fill = list(n = 0))
+  dplyr::select(Opcode, Genus.Species,n)%>%
+  complete(Opcode)%>%
+  complete(Genus.Species, nesting(Opcode), fill = list(n = 0))%>% #gives a complete list of species with zeros for absences
+  left_join(.,factors)
 
 #check all sites are present in data
 MedSite<-unique(Med.complete.data$Site)
@@ -134,10 +156,13 @@ head(MedSiteList)
 ##convert to Wide Format
 Med.data_wide <- spread(Med.complete.data, Genus.Species, n)
 
+##Remove all species with all zero columns
+med.test<-Med.data_wide[, c(6:155)]
+med.df<-med.test[, colSums(med.test,na.rm = TRUE) != 0]
+med.fact<-Med.data_wide[, c(1:5)]
 
 #reorder columns
-Med.data_wide <- Med.data_wide[, c(6:154, 1,2,3,4,5)]#change this to suit the number of columns and factors
-
+Med.data_wide<-cbind(med.df,med.fact)
 
 # Make the blank Column----
 temp.column<-matrix(c(rep.int("",length(Med.data_wide))),nrow=length(Med.data_wide),ncol=1)
@@ -147,9 +172,11 @@ blank.column<-data.frame(temp.column)
 Med.data_wide[]<-lapply(Med.data_wide,as.character) #have to make whole data.frame as.character
 Med.primer<-Med.data_wide%>%
   bind_rows(blank.column)
-Med.primer<- Med.primer[, c(1:149, 155,150,151,152,153,154)]#change this to suit the number of columns
+Med.primer<- Med.primer[, c(1:89, 95,90,91,92,93,94)]#change this to suit the number of columns
 Med.primer <- plyr::rename(Med.primer, replace =c("temp.column"="") )
 Med.primer[is.na(Med.primer)] <- ""
+Med.primer$Code <- 1:nrow(Med.primer) 
+Med.primer<- Med.primer[, c(96, 1:95)]#
 
 # Write PRIMER data----
 head(Med.primer)
@@ -167,10 +194,13 @@ Large <-subset(Lengthdf, Length>=360 & Length<=1000)%>%
   ### Use this bit if you want abundance
   dplyr::group_by(Opcode, Genus.Species, Status, Location, Site, Year)%>%
   tally()
+
 Large.complete.data<-Large %>% 
   ungroup() %>%
-  complete(Site,  fill = list(n = 0)) %>%
-  complete(Genus.Species, nesting (Opcode,Status, Site, Location, Year), fill = list(n = 0))
+  dplyr::select(Opcode, Genus.Species,n)%>%
+  complete(Opcode)%>%
+  complete(Genus.Species, nesting(Opcode), fill = list(n = 0))%>% #gives a complete list of species with zeros for absences
+  left_join(.,factors)
 
 #check all sites are present in data
 LargeSite<-unique(Large.complete.data$Site)
@@ -180,13 +210,13 @@ head(LargeSiteList)
 ##convert to Wide Format
 Large.data_wide <- spread(Large.complete.data, Genus.Species, n)
 
-##convert to Wide Format
-Large.data_wide <- spread(Large.complete.data, Genus.Species, n)
-
+##Remove all species with all zero columns
+lar.test<-Large.data_wide[, c(6:155)]
+lar.df<-lar.test[, colSums(lar.test,na.rm = TRUE) != 0]
+lar.fact<-Large.data_wide[, c(1:5)]
 
 #reorder columns
-Large.data_wide <- Large.data_wide[, c(6:154, 1,2,3,4,5)]#change this to suit the number of columns
-
+Large.data_wide<-cbind(lar.df,lar.fact)
 
 # Make the blank Column----
 temp.column<-matrix(c(rep.int("",length(Large.data_wide))),nrow=length(Large.data_wide),ncol=1)
@@ -196,9 +226,11 @@ blank.column<-data.frame(temp.column)
 Large.data_wide[]<-lapply(Large.data_wide,as.character) #have to make whole data.frame as.character
 Large.primer<-Large.data_wide%>%
   bind_rows(blank.column)
-Large.primer<- Large.primer[, c(1:149, 155,150,151,152,153,154)]#change this to suit the number of columns
+Large.primer<- Large.primer[, c(1:76, 82,77,78,79,80,81)]#change this to suit the number of columns
 Large.primer <- plyr::rename(Large.primer, replace =c("temp.column"="") )
 Large.primer[is.na(Large.primer)] <- ""
+Large.primer$Code <- 1:nrow(Large.primer) 
+Large.primer<- Large.primer[, c(83, 1:82)]#
 
 # Write PRIMER data----
 head(Large.primer)

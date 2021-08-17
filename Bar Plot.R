@@ -5,8 +5,7 @@ data<-read.csv("Body Size CAP scores.csv")
 
 Small<-data%>%
 filter(Body.Size.Class=="Small")%>%
- filter(Percentage.of.Sites>=0.20)
-%>%
+ filter(Percentage.of.Sites>=0.20)%>%
  filter(CAP.Correlation<= -0.25 | CAP.Correlation>= 0.25)
 
 Medium<-data%>%
