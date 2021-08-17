@@ -216,7 +216,7 @@ lar.df<-lar.test[, colSums(lar.test,na.rm = TRUE) != 0]
 lar.fact<-Large.data_wide[, c(1:5)]
 
 #reorder columns
-Large.data_wide<-cbind(lar.df,lar.fact)
+Large.data_wide<-cbind(lar.fact,lar.df)
 
 # Make the blank Column----
 temp.column<-matrix(c(rep.int("",length(Large.data_wide))),nrow=length(Large.data_wide),ncol=1)
@@ -236,7 +236,9 @@ Large.primer<- Large.primer[, c(83, 1:82)]#
 head(Large.primer)
 write.csv(Large.primer,file=paste(study,"Large.PRIMER.fixed.csv",sep = "_"), row.names=FALSE)
 
+library(BiodiversityR)
 
+CAPdiscrim(lar.df, lar.fact, dist="gower", axes=4, m=0, mmax=10, add=FALSE, permutations=0)
 
 
 #create species lists
