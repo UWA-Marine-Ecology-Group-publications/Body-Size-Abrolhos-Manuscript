@@ -1,3 +1,7 @@
+
+#Code for running post hoc tests using mvabund package
+#Author: Kye Adams
+
 ##Walkthrough
 ##http://environmentalcomputing.net/introduction-to-mvabund/ 
 
@@ -7,7 +11,7 @@
 
 library(mvabund)
 
-###Simple models one factor
+###Effect of Status on each species in the three length categories (small, medium and large)
 
 Small.data<-cbind(sm.fact,sm.df)
 par(mar=c(2,10,2,2)) # adjusts the margins
@@ -56,26 +60,3 @@ Smallresults <- anova(mod3, resamp="perm.resid", p.uni="adjusted", nBoot=999, te
 Largeresults
 Mediumresults
 Smallresults
-as.dataframe(Largeresults[["uni.test"]])
-
-#try to export results
-out1<-ldply(1, Largeresults)
-
-write.csv(out1, file="file.name")
-
-LargeSummary<-summary.manyglm(mod4, resamp="perm.resid", p.uni="adjusted", nBoot=999, test= "LR")
-MediumSummary <- summary.manyglm(mod1, resamp="perm.resid", p.uni="adjusted", nBoot=999, test= "LR")
-SmallSummary <- summary.manyglm(mod3, resamp="perm.resid", p.uni="adjusted", nBoot=999,test= "LR")
-
-LargeSummary
-MediumSummary
-SmallSummary
-
-###trying more complex models
-
-mod5 <- manyglm(Large_spp ~ Large.data$Location+ Large.data$Status +Large.data$Year, family="negative_binomial")
-plot(mod4)
-step(mod5)
-anova.manyglm(mod5)
-anova.manyglm(mod5, p.uni="adjusted", nBoot=99, test= "LR")
-summary.manyglm(mod5, p.uni="adjusted", nBoot=99, test= "LR")

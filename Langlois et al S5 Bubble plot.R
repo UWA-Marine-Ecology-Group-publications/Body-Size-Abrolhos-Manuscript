@@ -1,3 +1,8 @@
+
+#Code for creating Bubble plot of relative abundance
+
+#Author: Kye Adams 6/09/2021
+
 library(ggplot2)
 library(reshape2)
 library(tidyverse)
